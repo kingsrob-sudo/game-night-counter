@@ -49,9 +49,9 @@
     min-height: 100px; display: flex; flex-direction: column; justify-content: space-between;
   }
   .tile:active { transform: scale(0.97) !important; }
-  .tile-name { font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700; letter-spacing:0.04em; margin-bottom:6px; }
-  .tile-count { font-size:12px; color:rgba(255,255,255,0.4); }
-  .tile-dots { display:flex; gap:4px; margin-top:10px; }
+  .tile-name { font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700; letter-spacing:0.04em; margin-bottom:6px; text-align:center; }
+  .tile-count { font-size:12px; color:rgba(255,255,255,0.4); text-align:center; }
+  .tile-dots { display:flex; gap:4px; margin-top:10px; justify-content:center; }
   .tile-dot { width:10px; height:10px; border-radius:50%; opacity:0.7; }
   .tile-preset { position:absolute; top:10px; right:12px; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; }
   .tile-del {
@@ -168,9 +168,10 @@
     align-items:center; justify-content:center; overflow:hidden; user-select:none; min-height:0;
   }
   .counter-title {
-    font-family:'Chakra Petch',sans-serif; font-size:39px; font-weight:700;
+    font-family:'Chakra Petch',sans-serif; font-size:27px; font-weight:700;
     letter-spacing:0.06em; text-transform:uppercase;
-    z-index:5; pointer-events:none; line-height:1; margin-top:4px;
+    z-index:5; pointer-events:none; line-height:1.1; margin-top:4px;
+    text-align:center; padding:0 8px;
   }
   .counter-edit-btn {
     position:absolute; top:6px; right:8px; border-radius:6px;
@@ -185,7 +186,7 @@
   .counter-minus { left:10px; }
   .counter-plus { right:10px; }
   .counter-value {
-    font-family:'Orbitron',sans-serif; font-size:48px; font-weight:700;
+    font-family:'Orbitron',sans-serif; font-size:72px; font-weight:700;
     color:#fff; z-index:3; pointer-events:none; line-height:1;
   }
   .counter-divider {
@@ -199,12 +200,12 @@
 
   /* phone font scaling */
   @media (max-width: 400px) {
-    .counter-value { font-size: 36px; }
-    .counter-title { font-size: 28px; }
+    .counter-value { font-size: 54px; }
+    .counter-title { font-size: 20px; }
   }
   @media (max-height: 700px) {
-    .counter-value { font-size: 34px; }
-    .counter-title { font-size: 24px; }
+    .counter-value { font-size: 50px; }
+    .counter-title { font-size: 18px; }
     .board-bar { padding: 6px 8px; }
     .board-grid { gap: 4px; padding: 4px; }
   }

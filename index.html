@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0f">
+<title>Game Night Counter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Chakra Petch', sans-serif;
+    background: #0a0a0f;
+    color: #fff;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* ── Screens ── */
+  .screen { display: none; height: 100vh; width: 100vw; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ── Library ── */
+  #library { overflow-y: auto; padding: 28px 16px; }
+  #library-inner { max-width: 520px; margin: 0 auto; }
+  .lib-header { text-align: center; margin-bottom: 28px; }
+  .lib-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 26px; font-weight: 900; letter-spacing: 0.12em;
+    background: linear-gradient(135deg, #c026d3, #6366f1, #0891b2);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .lib-sub { font-size: 13px; color: #666; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 6px; }
+  .edit-bar { text-align: right; margin-bottom: 10px; }
+  .btn-edit {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px; color: #888; font-family: inherit; font-size: 13px;
+    font-weight: 600; padding: 6px 16px; cursor: pointer;
+  }
+  .btn-edit.active { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: #ef4444; }
+  .tile-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+  .tile {
+    position: relative; border-radius: 16px; padding: 22px 16px;
+    cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+    min-height: 100px; display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .tile:active { transform: scale(0.97) !important; }
+  .tile-name { font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700; letter-spacing:0.04em; margin-bottom:6px; }
+  .tile-count { font-size:12px; color:rgba(255,255,255,0.4); }
+  .tile-dots { display:flex; gap:4px; margin-top:10px; }
+  .tile-dot { width:10px; height:10px; border-radius:50%; opacity:0.7; }
+  .tile-preset { position:absolute; top:10px; right:12px; font-size:9px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; }
+  .tile-del, .tile-edt {
+    position:absolute; width:28px; height:28px; border-radius:50%;
+    border:2px solid #0a0a0f; color:#fff; font-size:16px; font-weight:700;
+    cursor:pointer; display:none; align-items:center; justify-content:center;
+    padding:0; line-height:1; z-index:10;
+  }
+  .tile-del { top:-8px; right:-8px; background:#ef4444; }
+  .tile-edt { top:-8px; left:-8px; background:#6366f1; font-size:14px; }
+  .editing .tile-del, .editing .tile-edt { display:flex; }
+  .editing .tile { cursor:default; }
+  .tile-add {
+    background: rgba(255,255,255,0.02); border: 2px dashed rgba(255,255,255,0.12);
+    border-radius:16px; padding:22px 16px; cursor:pointer; min-height:100px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition: border-color 0.2s;
+  }
+  .tile-add:hover { border-color: rgba(255,255,255,0.3); }
+  .tile-add-icon { font-size:36px; font-weight:300; color:rgba(255,255,255,0.25); line-height:1; margin-bottom:6px; }
+  .tile-add-label { font-size:13px; color:#555; font-weight:600; letter-spacing:0.04em; }
+  .editing .tile-add { opacity:0.3; pointer-events:none; }
+
+  /* ── Config ── */
+  #config { overflow-y: auto; padding: 24px 16px; }
+  #config-inner { max-width: 500px; margin: 0 auto; }
+  .cfg-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+  .cfg-title { font-family:'Orbitron',sans-serif; font-size:20px; font-weight:700; letter-spacing:0.06em; }
+  .btn-back {
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+    border-radius:10px; color:#aaa; font-family:inherit; font-size:14px; font-weight:600;
+    padding:8px 18px; cursor:pointer;
+  }
+  .cfg-label { font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#888; margin-bottom:8px; display:block; }
+  .cfg-name-input {
+    width:100%; font-family:inherit; font-size:18px; font-weight:600;
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
+    border-radius:12px; color:#fff; padding:12px 16px; margin-bottom:28px; outline:none;
+  }
+  .cfg-box {
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+    border-radius:14px; padding:14px 16px; margin-bottom:12px;
+  }
+  .cfg-box-row { display:flex; gap:10px; margin-bottom:10px; }
+  .cfg-box-title {
+    flex:1; font-family:inherit; font-size:15px; font-weight:600;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+    border-radius:8px; color:#fff; padding:8px 12px; outline:none;
+  }
+  .cfg-box-val {
+    width:80px; font-family:inherit; font-size:15px; font-weight:600;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+    border-radius:8px; color:#fff; padding:8px 10px; text-align:center; outline:none;
+  }
+  .cfg-colors { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .cfg-color-dot {
+    width:24px; height:24px; border-radius:50%; border:2px solid transparent;
+    cursor:pointer; padding:0; transition: border 0.15s;
+  }
+  .cfg-color-dot.selected { border:3px solid #fff; }
+  .btn-remove {
+    margin-left:auto; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3);
+    border-radius:8px; color:#ef4444; font-family:inherit; font-size:12px; font-weight:600;
+    padding:4px 12px; cursor:pointer;
+  }
+  .btn-remove:disabled { opacity:0.3; }
+  .btn-add-box {
+    width:100%; margin-top:4px; padding:14px; font-family:inherit; font-size:15px; font-weight:700;
+    background:rgba(255,255,255,0.04); border:2px dashed rgba(255,255,255,0.15);
+    border-radius:14px; color:#888; cursor:pointer; letter-spacing:0.04em;
+  }
+
+  /* Preview */
+  .cfg-preview { margin-top:28px; }
+  .cfg-preview-grid { gap:6px; aspect-ratio:4/3; }
+  .cfg-preview-box {
+    border-radius:10px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; font-weight:600; gap:2px;
+  }
+  .cfg-preview-title { font-size:10px; opacity:0.7; }
+  .cfg-preview-val { font-family:'Orbitron',sans-serif; font-size:18px; color:#fff; }
+
+  .btn-save {
+    width:100%; margin-top:24px; padding:16px; font-family:'Orbitron',sans-serif;
+    font-size:16px; font-weight:700; letter-spacing:0.1em; border:none;
+    border-radius:14px; color:#fff; cursor:pointer; text-transform:uppercase;
+    background: linear-gradient(135deg, #c026d3, #6366f1);
+  }
+  .btn-save:disabled { background:rgba(255,255,255,0.06); color:#555; cursor:default; }
+
+  /* ── Game Board ── */
+  #board { overflow: hidden; }
+  .board-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.08); flex-shrink:0;
+  }
+  .board-title { font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700; letter-spacing:0.08em; }
+  .btn-exit {
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+    border-radius:8px; color:#aaa; font-family:inherit; font-size:13px; font-weight:600;
+    padding:6px 14px; cursor:pointer;
+  }
+  .btn-reset {
+    background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.25);
+    border-radius:8px; color:#ef4444; font-family:inherit; font-size:13px; font-weight:600;
+    padding:6px 14px; cursor:pointer;
+  }
+  .board-grid { flex:1; display:grid; gap:8px; padding:8px; min-height:0; }
+
+  /* Counter box */
+  .counter-box {
+    position:relative; border-radius:16px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; overflow:hidden; user-select:none; min-height:0;
+  }
+  .counter-title {
+    font-family:'Chakra Petch',sans-serif; font-size:13px; font-weight:700;
+    letter-spacing:0.08em; text-transform:uppercase; position:absolute;
+    top:10px; left:0; right:0; text-align:center; z-index:5;
+  }
+  .counter-edit-btn {
+    position:absolute; top:8px; right:10px; border-radius:6px;
+    font-family:inherit; font-size:11px; font-weight:600; padding:2px 8px;
+    cursor:pointer; z-index:10;
+  }
+  .counter-zones { position:absolute; inset:0; display:flex; z-index:2; }
+  .counter-zone { flex:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .counter-minus, .counter-plus {
+    font-size:28px; font-weight:300; position:absolute; top:50%; transform:translateY(-50%);
+  }
+  .counter-minus { left:14px; }
+  .counter-plus { right:14px; }
+  .counter-value {
+    font-family:'Orbitron',sans-serif; font-size:52px; font-weight:700;
+    color:#fff; z-index:3; pointer-events:none; line-height:1;
+  }
+  .counter-divider {
+    position:absolute; top:30%; bottom:30%; left:50%; width:1px; z-index:1;
+  }
+  .counter-input {
+    width:90px; font-family:'Orbitron',sans-serif; font-size:32px; font-weight:700;
+    text-align:center; background:rgba(0,0,0,0.6); border-radius:10px;
+    color:#fff; padding:4px 8px; outline:none; z-index:20; border-width:2px; border-style:solid;
+  }
+
+  /* phone font scaling */
+  @media (max-width: 400px) {
+    .counter-value { font-size: 38px; }
+    .counter-title { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════ LIBRARY SCREEN ════════ -->
+<div id="library" class="screen active">
+  <div id="library-inner">
+    <div class="lib-header">
+      <div class="lib-title">GAME NIGHT</div>
+      <div class="lib-sub">Counter Companion</div>
+    </div>
+    <div class="edit-bar"><button class="btn-edit" id="btn-edit-mode">Edit</button></div>
+    <div class="tile-grid" id="tile-grid"></div>
+  </div>
+</div>
+
+<!-- ════════ CONFIG SCREEN ════════ -->
+<div id="config" class="screen">
+  <div id="config-inner">
+    <div class="cfg-top">
+      <button class="btn-back" id="cfg-back">← Back</button>
+      <div class="cfg-title" id="cfg-screen-title">NEW GAME</div>
+      <div style="width:80px"></div>
+    </div>
+    <label class="cfg-label">Game Name</label>
+    <input class="cfg-name-input" id="cfg-name" placeholder="e.g. Catan, MTG Draft...">
+    <label class="cfg-label">Counter Boxes (<span id="cfg-box-count">2</span>)</label>
+    <div id="cfg-boxes"></div>
+    <button class="btn-add-box" id="cfg-add-box">+ Add Counter Box</button>
+    <div class="cfg-preview">
+      <label class="cfg-label">Preview Layout</label>
+      <div id="cfg-preview-grid" class="cfg-preview-grid" style="display:grid;"></div>
+    </div>
+    <button class="btn-save" id="cfg-save" disabled>Create Game</button>
+  </div>
+</div>
+
+<!-- ════════ GAME BOARD ════════ -->
+<div id="board" class="screen">
+  <div class="board-bar">
+    <button class="btn-exit" id="board-exit">← Exit</button>
+    <span class="board-title" id="board-title"></span>
+    <button class="btn-reset" id="board-reset">Reset</button>
+  </div>
+  <div class="board-grid" id="board-grid"></div>
+</div>
+
+<script>
+// ── Constants ──
+const STORAGE_KEY = 'game-night-configs';
+const BOX_COLORS = [
+  '#c026d3','#0891b2','#16a34a','#f59e0b','#ef4444','#6366f1',
+  '#ec4899','#14b8a6','#f97316','#8b5cf6','#06b6d4','#84cc16'
+];
+const PRESET_GAMES = [
+  { id:'mtg-standard', name:'MTG Standard', preset:true, color:'#c026d3',
+    boxes:[{title:'Player 1',color:'#c026d3',startValue:20},{title:'Player 2',color:'#0891b2',startValue:20}]},
+  { id:'mtg-commander', name:'MTG Commander', preset:true, color:'#f59e0b',
+    boxes:[{title:'Player 1',color:'#c026d3',startValue:40},{title:'Player 2',color:'#0891b2',startValue:40},
+           {title:'Player 3',color:'#16a34a',startValue:40},{title:'Player 4',color:'#f59e0b',startValue:40}]}
+];
+
+// ── State ──
+let games = [];
+let editMode = false;
+let editingGameId = null;
+let activeGame = null;
+let boardValues = [];
+let holdTimers = {};
+
+// ── Helpers ──
+function hexToRgb(hex) {
+  return `${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)}`;
+}
+function getGrid(count) {
+  if (count <= 2) return { c:1, r:count };
+  if (count <= 4) return { c:2, r:2 };
+  if (count <= 6) return { c:2, r:3 };
+  if (count <= 8) return { c:2, r:4 };
+  return { c:3, r:Math.ceil(count/3) };
+}
+function loadGames() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { games = JSON.parse(raw); } else { games = JSON.parse(JSON.stringify(PRESET_GAMES)); saveGames(); }
+  } catch { games = JSON.parse(JSON.stringify(PRESET_GAMES)); }
+}
+function saveGames() { localStorage.setItem(STORAGE_KEY, JSON.stringify(games)); }
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Library ──
+function renderLibrary() {
+  const grid = document.getElementById('tile-grid');
+  grid.innerHTML = '';
+  const container = document.getElementById('library-inner');
+  container.classList.toggle('editing', editMode);
+
+  games.forEach((game, gi) => {
+    const rgb = hexToRgb(game.color);
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.style.background = `linear-gradient(145deg, rgba(${rgb},0.18) 0%, rgba(${rgb},0.05) 100%)`;
+    tile.style.border = `1px solid rgba(${rgb},0.3)`;
+
+    let dotsHtml = game.boxes.slice(0,6).map(b => `<div class="tile-dot" style="background:${b.color}"></div>`).join('');
+    if (game.boxes.length > 6) dotsHtml += `<span style="font-size:10px;color:#666">+${game.boxes.length-6}</span>`;
+
+    tile.innerHTML = `
+      <button class="tile-del" data-idx="${gi}">×</button>
+      <button class="tile-edt" data-idx="${gi}">✎</button>
+      <div>
+        <div class="tile-name">${game.name}</div>
+        <div class="tile-count">${game.boxes.length} counter${game.boxes.length===1?'':'s'}</div>
+      </div>
+      <div class="tile-dots">${dotsHtml}</div>
+      ${game.preset ? `<div class="tile-preset" style="color:rgba(${rgb},0.5)">preset</div>` : ''}
+    `;
+
+    tile.addEventListener('click', (e) => {
+      if (editMode) return;
+      if (e.target.closest('.tile-del') || e.target.closest('.tile-edt')) return;
+      startGame(game);
+    });
+    tile.querySelector('.tile-del').addEventListener('click', (e) => {
+      e.stopPropagation();
+      games.splice(gi, 1);
+      saveGames();
+      renderLibrary();
+    });
+    tile.querySelector('.tile-edt').addEventListener('click', (e) => {
+      e.stopPropagation();
+      editMode = false;
+      openConfig(game);
+    });
+
+    grid.appendChild(tile);
+  });
+
+  // Add tile
+  const addTile = document.createElement('div');
+  addTile.className = 'tile-add';
+  addTile.innerHTML = `<div class="tile-add-icon">+</div><div class="tile-add-label">New Game</div>`;
+  addTile.addEventListener('click', () => { if (!editMode) openConfig(null); });
+  grid.appendChild(addTile);
+
+  // Edit button
+  const btn = document.getElementById('btn-edit-mode');
+  btn.textContent = editMode ? 'Done' : 'Edit';
+  btn.className = 'btn-edit' + (editMode ? ' active' : '');
+}
+
+document.getElementById('btn-edit-mode').addEventListener('click', () => {
+  editMode = !editMode;
+  renderLibrary();
+});
+
+// ── Config ──
+let cfgBoxes = [];
+
+function openConfig(game) {
+  editingGameId = game ? game.id : null;
+  document.getElementById('cfg-screen-title').textContent = game ? 'EDIT GAME' : 'NEW GAME';
+  document.getElementById('cfg-name').value = game ? game.name : '';
+  document.getElementById('cfg-save').textContent = game ? 'Save Changes' : 'Create Game';
+  cfgBoxes = game
+    ? game.boxes.map(b => ({...b}))
+    : [{title:'Player 1',color:BOX_COLORS[0],startValue:0},{title:'Player 2',color:BOX_COLORS[1],startValue:0}];
+  renderConfigBoxes();
+  updateSaveBtn();
+  showScreen('config');
+}
+
+function renderConfigBoxes() {
+  const container = document.getElementById('cfg-boxes');
+  container.innerHTML = '';
+  document.getElementById('cfg-box-count').textContent = cfgBoxes.length;
+
+  cfgBoxes.forEach((box, i) => {
+    const div = document.createElement('div');
+    div.className = 'cfg-box';
+    div.style.borderLeft = `4px solid ${box.color}`;
+
+    let colorDots = BOX_COLORS.map(c =>
+      `<button class="cfg-color-dot${box.color===c?' selected':''}" style="background:${c}" data-idx="${i}" data-color="${c}"></button>`
+    ).join('');
+
+    div.innerHTML = `
+      <div class="cfg-box-row">
+        <input class="cfg-box-title" value="${box.title}" data-idx="${i}" data-field="title" placeholder="Title">
+        <input class="cfg-box-val" type="number" value="${box.startValue}" data-idx="${i}" data-field="startValue" placeholder="Start">
+      </div>
+      <div class="cfg-colors">
+        ${colorDots}
+        <button class="btn-remove" data-idx="${i}" ${cfgBoxes.length<=1?'disabled':''}>Remove</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
+  // Events
+  container.querySelectorAll('.cfg-box-title, .cfg-box-val').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const i = +e.target.dataset.idx;
+      const f = e.target.dataset.field;
+      cfgBoxes[i][f] = f === 'startValue' ? (parseInt(e.target.value,10)||0) : e.target.value;
+      renderPreview();
+    });
+  });
+  container.querySelectorAll('.cfg-color-dot').forEach(dot => {
+    dot.addEventListener('click', (e) => {
+      const i = +e.target.dataset.idx;
+      cfgBoxes[i].color = e.target.dataset.color;
+      renderConfigBoxes();
+      renderPreview();
+    });
+  });
+  container.querySelectorAll('.btn-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const i = +e.target.dataset.idx;
+      if (cfgBoxes.length > 1) { cfgBoxes.splice(i,1); renderConfigBoxes(); renderPreview(); }
+    });
+  });
+
+  renderPreview();
+}
+
+function renderPreview() {
+  const g = getGrid(cfgBoxes.length);
+  const grid = document.getElementById('cfg-preview-grid');
+  grid.style.gridTemplateColumns = `repeat(${g.c},1fr)`;
+  grid.innerHTML = '';
+  cfgBoxes.forEach(box => {
+    const rgb = hexToRgb(box.color);
+    const div = document.createElement('div');
+    div.className = 'cfg-preview-box';
+    div.style.background = `rgba(${rgb},0.15)`;
+    div.style.border = `1px solid rgba(${rgb},0.35)`;
+    div.innerHTML = `<span class="cfg-preview-title" style="color:${box.color}">${box.title}</span><span class="cfg-preview-val">${box.startValue}</span>`;
+    grid.appendChild(div);
+  });
+}
+
+function updateSaveBtn() {
+  const btn = document.getElementById('cfg-save');
+  btn.disabled = !document.getElementById('cfg-name').value.trim();
+}
+
+document.getElementById('cfg-name').addEventListener('input', updateSaveBtn);
+document.getElementById('cfg-add-box').addEventListener('click', () => {
+  const idx = cfgBoxes.length % BOX_COLORS.length;
+  cfgBoxes.push({title:`Counter ${cfgBoxes.length+1}`, color:BOX_COLORS[idx], startValue:0});
+  renderConfigBoxes();
+});
+document.getElementById('cfg-back').addEventListener('click', () => { showScreen('library'); renderLibrary(); });
+document.getElementById('cfg-save').addEventListener('click', () => {
+  const name = document.getElementById('cfg-name').value.trim();
+  if (!name) return;
+  const gameData = {
+    id: editingGameId || ('custom-'+Date.now()),
+    name,
+    preset: false,
+    color: cfgBoxes[0]?.color || BOX_COLORS[0],
+    boxes: cfgBoxes.map(b => ({...b}))
+  };
+  if (editingGameId) {
+    const idx = games.findIndex(g => g.id === editingGameId);
+    if (idx >= 0) games[idx] = gameData; else games.push(gameData);
+  } else {
+    games.push(gameData);
+  }
+  saveGames();
+  editingGameId = null;
+  showScreen('library');
+  renderLibrary();
+});
+
+// ── Game Board ──
+function startGame(game) {
+  activeGame = game;
+  boardValues = game.boxes.map(b => b.startValue);
+  renderBoard();
+  showScreen('board');
+}
+
+function renderBoard() {
+  document.getElementById('board-title').textContent = activeGame.name;
+  const g = getGrid(activeGame.boxes.length);
+  const grid = document.getElementById('board-grid');
+  grid.style.gridTemplateColumns = `repeat(${g.c},1fr)`;
+  grid.style.gridTemplateRows = `repeat(${g.r},1fr)`;
+  grid.innerHTML = '';
+
+  activeGame.boxes.forEach((box, i) => {
+    const rgb = hexToRgb(box.color);
+    const el = document.createElement('div');
+    el.className = 'counter-box';
+    el.style.background = `linear-gradient(145deg, rgba(${rgb},0.25) 0%, rgba(${rgb},0.08) 100%)`;
+    el.style.border = `1px solid rgba(${rgb},0.4)`;
+
+    el.innerHTML = `
+      <div class="counter-title" style="color:${box.color}">${box.title}</div>
+      <button class="counter-edit-btn" style="background:rgba(${rgb},0.3);border:1px solid rgba(${rgb},0.4);color:${box.color}" data-idx="${i}">#</button>
+      <div class="counter-zones">
+        <div class="counter-zone" data-idx="${i}" data-delta="-1">
+          <span class="counter-minus" style="color:rgba(${rgb},0.35)">−</span>
+        </div>
+        <div class="counter-zone" data-idx="${i}" data-delta="1">
+          <span class="counter-plus" style="color:rgba(${rgb},0.35)">+</span>
+        </div>
+      </div>
+      <div class="counter-value" data-val-idx="${i}" style="text-shadow:0 0 30px rgba(${rgb},0.5)">${boardValues[i]}</div>
+      <div class="counter-divider" style="background:rgba(${rgb},0.15)"></div>
+    `;
+    grid.appendChild(el);
+  });
+
+  // Tap / hold events
+  grid.querySelectorAll('.counter-zone').forEach(zone => {
+    const idx = +zone.dataset.idx;
+    const delta = +zone.dataset.delta;
+
+    const start = () => {
+      boardValues[idx] += delta;
+      updateValueDisplay(idx);
+      let accel = 1;
+      holdTimers[idx+'-'+delta] = setTimeout(function tick() {
+        boardValues[idx] += delta * accel;
+        updateValueDisplay(idx);
+        if (accel < 5) accel++;
+        holdTimers[idx+'-'+delta] = setTimeout(tick, 120);
+      }, 400);
+    };
+    const stop = () => {
+      clearTimeout(holdTimers[idx+'-'+delta]);
+    };
+
+    zone.addEventListener('mousedown', start);
+    zone.addEventListener('mouseup', stop);
+    zone.addEventListener('mouseleave', stop);
+    zone.addEventListener('touchstart', (e) => { e.preventDefault(); start(); });
+    zone.addEventListener('touchend', stop);
+    zone.addEventListener('touchcancel', stop);
+  });
+
+  // Edit buttons
+  grid.querySelectorAll('.counter-edit-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = +btn.dataset.idx;
+      const box = activeGame.boxes[idx];
+      const rgb2 = hexToRgb(box.color);
+      const valEl = grid.querySelector(`[data-val-idx="${idx}"]`);
+
+      // Replace value with input
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'counter-input';
+      input.style.borderColor = box.color;
+      input.value = boardValues[idx];
+      valEl.style.display = 'none';
+      valEl.parentNode.insertBefore(input, valEl.nextSibling);
+      input.focus();
+      input.select();
+
+      const finish = () => {
+        const n = parseInt(input.value, 10);
+        if (!isNaN(n)) { boardValues[idx] = n; }
+        updateValueDisplay(idx);
+        valEl.style.display = '';
+        input.remove();
+      };
+      input.addEventListener('blur', finish);
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === 'Escape') { input.blur(); }
+      });
+    });
+  });
+}
+
+function updateValueDisplay(idx) {
+  const el = document.querySelector(`[data-val-idx="${idx}"]`);
+  if (el) el.textContent = boardValues[idx];
+}
+
+document.getElementById('board-exit').addEventListener('click', () => {
+  Object.values(holdTimers).forEach(t => clearTimeout(t));
+  holdTimers = {};
+  showScreen('library');
+  renderLibrary();
+});
+document.getElementById('board-reset').addEventListener('click', () => {
+  boardValues = activeGame.boxes.map(b => b.startValue);
+  activeGame.boxes.forEach((_, i) => updateValueDisplay(i));
+});
+
+// ── Init ──
+loadGames();
+renderLibrary();
+</script>
+</body>
+</html>

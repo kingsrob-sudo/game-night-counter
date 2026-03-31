@@ -511,11 +511,35 @@ document.getElementById('cfg-back').addEventListener('click', () => {
 });
 
 // ── Game Board ──
+const BOARD_KEY = 'game-night-board-';
+
 function startGame(game) {
   activeGame = game;
-  boardValues = game.boxes.map(b => b.startValue);
+  // Try to restore saved values
+  try {
+    const saved = localStorage.getItem(BOARD_KEY + game.id);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Only restore if box count matches (config hasn't changed)
+      if (parsed.length === game.boxes.length) {
+        boardValues = parsed;
+      } else {
+        boardValues = game.boxes.map(b => b.startValue);
+      }
+    } else {
+      boardValues = game.boxes.map(b => b.startValue);
+    }
+  } catch {
+    boardValues = game.boxes.map(b => b.startValue);
+  }
   renderBoard();
   showScreen('board');
+}
+
+function saveBoardValues() {
+  if (activeGame) {
+    localStorage.setItem(BOARD_KEY + activeGame.id, JSON.stringify(boardValues));
+  }
 }
 
 function renderBoard() {
@@ -623,12 +647,14 @@ function updateValueDisplay(idx) {
 document.getElementById('board-exit').addEventListener('click', () => {
   Object.values(holdTimers).forEach(t => clearTimeout(t));
   holdTimers = {};
+  saveBoardValues();
   showScreen('library');
   renderLibrary();
 });
 document.getElementById('board-reset').addEventListener('click', () => {
   boardValues = activeGame.boxes.map(b => b.startValue);
   activeGame.boxes.forEach((_, i) => updateValueDisplay(i));
+  localStorage.removeItem(BOARD_KEY + activeGame.id);
 });
 
 // ── Init ──

@@ -269,7 +269,10 @@ const PRESET_GAMES = [
     boxes:[{title:'Player 1',color:'#c026d3',startValue:20},{title:'Player 2',color:'#0891b2',startValue:20}]},
   { id:'mtg-commander', name:'MTG Commander', preset:true, color:'#f59e0b',
     boxes:[{title:'Player 1',color:'#c026d3',startValue:40},{title:'Player 2',color:'#0891b2',startValue:40},
-           {title:'Player 3',color:'#16a34a',startValue:40},{title:'Player 4',color:'#f59e0b',startValue:40}]}
+           {title:'Player 3',color:'#16a34a',startValue:40},{title:'Player 4',color:'#f59e0b',startValue:40}]},
+  { id:'moon-colony-bloodbath', name:'Moon Colony Bloodbath', preset:true, color:'#8b5cf6',
+    boxes:[{title:'Work',color:'#8b5cf6',startValue:0},{title:'Money',color:'#f59e0b',startValue:4},
+           {title:'Colonists',color:'#0891b2',startValue:30},{title:'Food',color:'#16a34a',startValue:4}]}
 ];
 
 // ── State ──
@@ -296,7 +299,19 @@ function getGrid(count) {
 function loadGames() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) { games = JSON.parse(raw); } else { games = JSON.parse(JSON.stringify(PRESET_GAMES)); saveGames(); }
+    if (raw) {
+      games = JSON.parse(raw);
+      // Merge in any new presets that aren't already saved
+      PRESET_GAMES.forEach(p => {
+        if (!games.find(g => g.id === p.id)) {
+          games.push(JSON.parse(JSON.stringify(p)));
+        }
+      });
+      saveGames();
+    } else {
+      games = JSON.parse(JSON.stringify(PRESET_GAMES));
+      saveGames();
+    }
   } catch { games = JSON.parse(JSON.stringify(PRESET_GAMES)); }
 }
 function saveGames() { localStorage.setItem(STORAGE_KEY, JSON.stringify(games)); }
